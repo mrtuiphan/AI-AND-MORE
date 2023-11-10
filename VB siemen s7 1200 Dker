@@ -1,0 +1,41 @@
+IF #Start_Stop AND #"VFD Fault" = TRUE AND "Báo lỗi mất pha" = TRUE THEN
+    #Quạt := TRUE;
+    #"Valve lanh cmd" := #Start_Stop ;
+ELSIF (#Start_Stop = FALSE OR #"VFD Fault" = FALSE OR "Báo lỗi mất pha" = FALSE) AND #"TIME DELAY 3".Q THEN
+    #Quạt := FALSE;
+    #"Điện trở" := FALSE;
+    #"Valve lanh cmd" := FALSE;
+END_IF;
+#"Time DL 2".TON(IN := #Start_Stop AND (NOT #"AS khoang quat" OR NOT #"BV qua nhiet"),
+                 PT := t#3s);
+
+IF #Start_Stop AND #"VFD Fault" = TRUE AND "Báo lỗi mất pha" = TRUE THEN
+    #Pid_nhiet := TRUE;
+    IF #"Nhiet do" <= #"NĐ Cai dat"  THEN
+        ;
+    END_IF;
+    #Delay_dien_tro.TON(IN := #Start_Stop=TRUE AND  #"Do am" > #"ĐA cai dat" AND #"Nhiet do" < #"NĐ Cai dat" + #"Chenh NĐ" AND NOT #"Time DL 2".Q AND NOT #Xoa_loi,
+                        PT := t#5s);
+    IF #Start_Stop=TRUE AND #"Do am" > #"ĐA cai dat" AND #"Nhiet do" < #"NĐ Cai dat" + #"Chenh NĐ" AND NOT #"Time DL 2".Q AND NOT #Xoa_loi AND #Delay_dien_tro.Q
+         THEN
+        
+             #"Điện trở" := #Delay_dien_tro.Q;
+    END_IF;
+    
+    IF #"Do am" < #"ĐA cai dat" + #"Chenh DA" OR #"Nhiet do"> #"NĐ Cai dat"+ #"Chenh NĐ" OR #Xoa_loi THEN
+        #"Điện trở" := FALSE;
+    END_IF;
+      
+    
+ELSE
+    #Pid_nhiet := FALSE;
+    #"Điện trở" := FALSE;
+END_IF;
+IF NOT #"BV qua nhiet" OR #"Time DL 1".Q THEN
+    #Xoa_loi := TRUE;
+END_IF;
+#"Time DL 1".TON(IN := #Start_Stop AND NOT #"AS khoang quat",
+                 PT := t#30s);
+#"Status Sytem" := BOOL_TO_INT(IN := #"Time DL 1".Q);
+#"TIME DELAY 3".TON(IN :=  #Start_Stop=FALSE ,
+                 PT := 1000*#TGDUNG);
